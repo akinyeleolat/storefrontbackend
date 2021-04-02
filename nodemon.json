@@ -6,3 +6,4 @@
     ],
     "exec": "ts-node ./dist/server"
   }
+  
