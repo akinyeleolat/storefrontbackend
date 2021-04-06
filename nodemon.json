@@ -4,6 +4,6 @@
     "ignore": [
       "node_modules"
     ],
-    "exec": "ts-node ./dist/server"
+    "exec": "ts-node ./src/server.ts"
   }
   
