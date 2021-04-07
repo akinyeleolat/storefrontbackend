@@ -6,12 +6,13 @@ import {
     INTERNAL_SERVER_ERROR,
     NOT_FOUND,
     OK,
+    UNAUTHORIZED,
 } from 'http-status-codes';
 
 import IUserPayload from "../interfaces/userpayload";
 import IObjectConstructor from '../interfaces/object';
 import { UserModel } from '../model';
-import { encryptPassword, isEqualsPassword } from '../utils/encrypter';
+import { isEqualsPassword } from '../utils/encrypter';
 import { createToken } from '../utils/passport';
 import {
     apiResponse,
@@ -19,7 +20,7 @@ import {
     successResponse,
 } from '../utils/response';
 import { logger } from '../utils/logger';
-// import pool from '../db/connect';
+import pool from '../db/connect';
 
 /**
  * @description User Service
@@ -27,18 +28,6 @@ import { logger } from '../utils/logger';
  * @public
  */
  export class UserService {
-
-    /**
-     * @description Creates an instance of user controller.
-     * @author `Tosin Akinyele`
-     * @constructor
-     * @param {UserModel} userModel
-     */
-     public constructor(private userModel: UserModel) {
-        this.register = this.register.bind(this);
-        // this.getAllUsers = this.getAllUsers.bind(this);
-        // this.login = this.login.bind(this);
-    }
 
     /**
      * register a new user into the system
@@ -52,19 +41,20 @@ import { logger } from '../utils/logger';
      * @param {NextFunction} next
      * @returns {Promise<Response>} a promise of EndPointResponse
      */
-     public async register(
+     static async register(
         req: Request,
         res: Response,
         next: NextFunction,
     ): Promise<Response> {
+        const db = await pool.connect();
         try {
             const user = <IUserPayload>req.body;
+            
             logger.info('register');
 
-            // const db = await pool.connect();
-            // this.userModel = new UserModel(db);
+            const userModel = new UserModel(db);
 
-            const isEmailAlready = await this.userModel.findByEmail(
+            const isEmailAlready = await userModel.findByEmail(
                 user.email,
             );
 
@@ -79,7 +69,9 @@ import { logger } from '../utils/logger';
                 );
             }
 
-            const payload = await this.userModel.save(user);
+            const payload = await userModel.save(user);
+
+            db.release();
 
             const token = createToken(payload);
 
@@ -93,7 +85,98 @@ import { logger } from '../utils/logger';
             );
             
         } catch (error) {
+            console.log(error);
             logger.error('error while register', { meta: { ...error } });
+            return apiResponse(
+                res,
+                failedResponse(getStatusText(INTERNAL_SERVER_ERROR)),
+                INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
+
+    /**
+     * login a new user into the system
+     * @Post
+     * @async
+     * @public
+     * @method login
+     * @memberof UserService
+     * @param {Request} req
+     * @param {Response} res
+     * @param {NextFunction} next
+     * @returns {Promise<Response>} a promise of EndPointResponse
+     */
+     static async login(
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ): Promise<Response> {
+        const db = await pool.connect();
+        try {
+            const user = <IUserPayload>req.body;
+            
+            logger.info(`login ${req.body.email}`);
+
+            const userModel = new UserModel(db);
+
+            const payload = await userModel.findByEmail(
+                user.email,
+            );
+
+            if (payload === null) {
+                logger.error(`user not found: ${user.email}`);
+
+                return apiResponse(
+                    res,
+                    failedResponse(getStatusText(UNAUTHORIZED)),
+                    UNAUTHORIZED,
+                );
+            }
+
+            const {password } = <IUserPayload> <unknown>payload;
+
+            const userPassword = password;
+
+            const samePassword = await isEqualsPassword(
+               userPassword,
+                user.password,
+            );
+
+            if (!samePassword) {
+                logger.error('wrong password');
+                return apiResponse(
+                    res,
+                    failedResponse(getStatusText(UNAUTHORIZED)),
+                    UNAUTHORIZED,
+                );
+            }
+
+            db.release();
+
+            const toSend = {
+                id: payload.id,
+                email: payload.email,
+                firstName: payload.firstName,
+                middleName: payload.middleName,
+                lastName: payload.lastName,
+            };
+
+            const token = createToken(toSend);
+
+            return apiResponse(
+                res,
+                successResponse({
+                    ...toSend,
+                    token,
+                }),
+                OK,
+            );
+            
+        } catch (error) {
+            console.log(error);
+            logger.error('error while login', { meta: { ...error } });
             return apiResponse(
                 res,
                 failedResponse(getStatusText(INTERNAL_SERVER_ERROR)),

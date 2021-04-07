@@ -56,6 +56,7 @@ export function validateRegister(
             next();
         }
     } catch (error) {
+        console.log(error)
         apiResponse<FailedResponse>(
             res,
             failedResponse(getStatusText(INTERNAL_SERVER_ERROR)),

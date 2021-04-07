@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { isAlpha, isAlphanumeric, isEmail, isEmpty, isLength } from 'validator';
+import  isLength from 'validator/lib/isLength';
+import isAlpha from 'validator/lib/isAlpha';
+import isAlphanumeric from 'validator/lib/isAlphanumeric';
+import isEmail from 'validator/lib/isEmail';
+import isEmpty from 'validator/lib/isEmpty';
+
 import {
     JwtError,
     LoginCredentials,

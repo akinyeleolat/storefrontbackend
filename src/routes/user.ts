@@ -1,7 +1,5 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { Router } from 'express';
-import pool from '../db/connect';
-import {UserModel} from '../model/user';
 import {UserService} from '../service';
 import {
     validateRegister,
@@ -9,16 +7,12 @@ import {
     verifyUser,
 } from '../middlewares';
 
+const userRoutes = Router();
 
 
 
-export async function UserRoutes(){
-    const db = await pool.connect();
-    const api = Router();
-    const userController = new UserService(new UserModel(db));
+userRoutes.post('/signup', [validateRegister], UserService.register);
+userRoutes.post('/login', [validatingLogin], UserService.login);
 
-    api.post('/signup', [validateRegister], userController.register);
 
-    return api;
-
-}
+export default userRoutes;

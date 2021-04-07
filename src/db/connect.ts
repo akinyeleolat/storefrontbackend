@@ -22,7 +22,7 @@ if (env === 'production') {
   } else {
     pool = new Pool(config);
   }
-
+  
 pool.on("connect", () => {
     console.log(`${process.env.NODE_ENV} environment config loaded, db connection established`);
 });

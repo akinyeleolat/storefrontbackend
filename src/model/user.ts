@@ -13,17 +13,7 @@ export class UserModel {
    * @param {object} db - Object used to query database.
    */
   public constructor(
-    private db: {
-      query: (
-        arg0: string,
-        arg1: IUserPayload
-      ) => PromiseLike<{ rows: any }> | { rows: any };
-      release: () => void;
-      oneOrNone: (
-        arg0: string,
-        arg1: string | number
-      ) => IObjectConstructor | PromiseLike<IObjectConstructor>;
-    }
+    private db: any
   ) {
     this.db = db;
     this.save = this.save.bind(this);
@@ -40,8 +30,14 @@ export class UserModel {
     const salt = bcrypt.genSaltSync(10);
     values.password = bcrypt.hashSync(values.password, salt);
 
-    const { rows } = await this.db.query(createUser, values);
-    this.db.release();
+    const user = [
+      values.firstName,
+      values.lastName,
+      values.email,
+      values.password
+    ]
+
+    const { rows } = await this.db.query(createUser, user);
 
     const payload = {
       id: rows[0].id,
@@ -58,8 +54,22 @@ export class UserModel {
    * @param {number} id - the id of a user.
    * @returns {object} user
    */
-  public async findById(id: number): Bluebird<IObjectConstructor> {
-    return this.db.oneOrNone(getUserById, id);
+  public async findById(id: number): Bluebird<IObjectConstructor| null> {
+    const { rows } = await this.db.query(getUserById, [Number(id)]);
+    this.db.release();
+
+    if(!rows.length){
+      return null;
+    }
+
+    const payload = {
+      id: rows[0].id,
+      firstName: rows[0].firstname,
+      lastName: rows[0].lastname,
+      email: rows[0].email,
+    };
+
+    return payload;
   }
 
   /**
@@ -67,7 +77,20 @@ export class UserModel {
    * @param {String} email - the email of a user.
    * @returns {object} user
    */
-  public async findByEmail(email: string): Bluebird<IObjectConstructor> {
-    return this.db.oneOrNone(getUserByEmail, email);
+  public async findByEmail(email: string): Bluebird<IObjectConstructor| null> {
+    const { rows } = await this.db.query(getUserByEmail, [email]);
+
+    if(!rows.length){
+      return null;
+    }
+    const payload = {
+      id: rows[0].id,
+      firstName: rows[0].firstname,
+      lastName: rows[0].lastname,
+      email: rows[0].email,
+      password: rows[0].password
+    };
+
+    return payload;
   }
 }
