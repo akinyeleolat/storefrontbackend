@@ -1,15 +1,34 @@
-import express, { Request, Response } from 'express'
-import bodyParser from 'body-parser'
+import { logger } from './utils/logger';
+import { port } from './config';
+import app from './app';
 
-const app: express.Application = express()
-const address: string = "0.0.0.0:3000"
+const Logger = logger;
 
-app.use(express.json())
+/*
+  @description handle specific listen errors with friendly messages
+  */
 
-app.get('/', function (req: Request, res: Response) {
-    res.send('Hello World!')
-})
+function onError(error: Error): void {
+    switch (error.name) {
+        case 'EACCES':
+            Logger.error(`${port} requires elevated privileges`);
+            process.exit(1);
+            break;
+        case 'EADDRINUSE':
+            Logger.error(`${port} is already in use`);
+            process.exit(1);
+            break;
+        default:
+            throw error;
+    }
+}
 
-app.listen(3000, function () {
-    console.log(`starting app on: ${address}`)
-})
+process.on('uncaughtException', e => {
+    Logger.error(e);
+});
+
+// const app = expressApp();
+
+app.listen(port, () => {
+    Logger.info(`server running on port : ${port}`);
+}).on('error', onError);
